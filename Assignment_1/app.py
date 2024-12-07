@@ -72,11 +72,19 @@ class SearchEngine:
     def extract_author_from_documents(self, documents):
         return [doc['author'] for doc in documents if doc.get('author')]
 
+    def stem(word):
+        suffixes = ['ing', 'es', 'ed', 'ly', 'er', 'ment', 'ness', 'ful', 'able', 'ible']
+        for suffix in suffixes:
+            if word.endswith(suffix):
+                return word[:-len(suffix)]
+        return word
+
     # Function to clear the stopword like "A Question" => "Question"
     def preprocess_text(self, text):
         stopwords = {"the", "and", "is", "in", "to", "of", "on", "for", "with", "a", "an", "as", "by", "this", "it", "at", "or", "that"}
         translator = str.maketrans('', '', string.punctuation)
-        return [word for word in text.lower().translate(translator).split() if word not in stopwords]
+
+        return [self.stem(word) for word in text.lower().translate(translator).split() if word not in stopwords]
 
     # Function which build inverted index where each unique term maps to the documents that contain it,
     # and it also calculate TF (Term Frequency) for each document, return search terms for suggestion purpose.

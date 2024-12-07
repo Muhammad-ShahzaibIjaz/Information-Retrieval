@@ -2,6 +2,7 @@ import os
 import string
 from math import sqrt
 from docx import Document
+from nltk.stem import PorterStemmer
 from collections import defaultdict, Counter
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -10,6 +11,8 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
+
+stemmer = PorterStemmer()
 
 
 class SearchEngine:
@@ -72,7 +75,8 @@ class SearchEngine:
     def preprocess_text(self, text):
         stopwords = {"the", "and", "is", "in", "to", "of", "on", "for", "with", "a", "an", "as", "by", "this", "it", "at", "or", "that"}
         translator = str.maketrans('', '', string.punctuation)
-        return [word for word in text.lower().translate(translator).split() if word not in stopwords]
+        words = text.lower().translate(translator).split()
+        return [stemmer.stem(word) for word in words if word not in stopwords]
 
     def build_index(self, documents):
         index = defaultdict(lambda: {'doc_ids': [], 'tf': {}})
