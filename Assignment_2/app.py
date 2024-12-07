@@ -109,7 +109,6 @@ class SearchEngine:
         return dot_product / (query_magnitude * document_magnitude)
 
     def suggest_keywords(self, input_text):
-        print(f"Received input text: {input_text}")
         input_text = input_text.lower()
         suggestions = [term for term in self.search_terms if term.startswith(input_text)]
         return sorted(suggestions, key=lambda x: self.search_terms[x], reverse=True)[:5]
@@ -160,9 +159,7 @@ def suggestions():
     if not query:
         return jsonify({"error": "Query parameter is required"}), 400
 
-    print(query)
     suggestions = search_engine.suggest_keywords(query)
-    print(suggestions)
     return jsonify({"suggestions": suggestions})
 
 
