@@ -3,7 +3,7 @@ import string
 import math
 from docx import Document
 from collections import defaultdict
-from nltk import PorterStemmer
+from nltk.stem import PorterStemmer
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -44,9 +44,6 @@ class SearchEngine():
                 doc_data['author'] = text[7:].strip()
             else:
                 doc_data['content'] += f"{text}"
-
-        content = f"{doc_data['title']} {doc_data['author']} {doc_data['content']}".replace("Abstract", "").strip()
-        doc_data['content'] = content
 
         return doc_data
     
@@ -137,7 +134,7 @@ class SearchEngine():
         for doc_id, _ in ranked_docs:
             doc = documents[doc_id]
             snippet = f"{doc['content'][:180].rsplit(' ', 1)[0]}..." if len(doc['content']) > 100 else doc['content']
-            result.append({'title': doc['title'], 'author': doc['author'], 'snippet': snippet, 'file_path': doc['file_name']})
+            result.append({'title': doc['title'], 'author': doc['author'], 'snippet': snippet.replace("Abstract", ""), 'file_path': doc['file_name']})
 
         return result
 

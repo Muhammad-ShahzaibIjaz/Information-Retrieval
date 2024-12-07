@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocFinder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Afacad+Flux:wght@100..1000&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lottie-web@5.9.4/build/player/lottie.min.js"></script>
+    <style>
+        /* Custom scrollbar styles */
+        .scrollbar-custom::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+  
+        .scrollbar-custom::-webkit-scrollbar-thumb {
+          background-color: #4a5568; /* Darker gray */
+          border-radius: 4px;
+        }
+  
+        .scrollbar-custom::-webkit-scrollbar-track {
+          background-color: #edf2f7; /* Light gray */
+          border-radius: 4px;
+        }
+
+        .dotted-loader {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px; /* Spacing between dots */
+        }
+
+        .dotted-loader span {
+            width: 10px;
+            height: 10px;
+            background-color: #3498db; /* Windows-like blue color */
+            border-radius: 50%;
+            animation: bounce 1.5s infinite;
+        }
+
+        .dotted-loader span:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+
+        .dotted-loader span:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+        #autocomplete-suggestions {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        #autocomplete-suggestions li {
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #autocomplete-suggestions li:hover {
+            background-color: #f3f4f6; /* Light gray */
+        }
+
+        #autocomplete-suggestions li.active {
+            background-color: #e5e7eb; /* Slightly darker gray */
+        }
+    </style>
+</head>
+<body class="h-screen relative isolate overflow-hidden bg-gray-900 px-6 pt-6 flex-col sm:px-16 md:pt-24 lg:flex lg:gap-x-20 lg:px-24 lg:pt-0" style="font-family: Afacad Flux, sans-serif;">
+    <svg viewBox="0 0 1024 1024" class="absolute left-1/2 top-1/2 -z-10 h-[64rem] w-[64rem] -translate-y-1/2 [mask-image:radial-gradient(closest-side,white,transparent)] sm:left-full sm:-ml-80 lg:left-1/2 lg:ml-0 lg:-translate-x-1/2 lg:translate-y-0" aria-hidden="true">
+        <circle cx="512" cy="512" r="512" fill="url(#759c1415-0410-454c-8f7c-9a820de03641)" fill-opacity="0.7" />
+        <defs>
+          <radialGradient id="759c1415-0410-454c-8f7c-9a820de03641">
+            <stop stop-color="#7775D6" />
+            <stop offset="1" stop-color="#E935C1" />
+          </radialGradient>
+        </defs>
+    </svg>
+    <!-- Header Section -->
+    <header class="text-center lg:mx-0 lg:pt-12">
+        <div class="container mx-auto px-6">
+            <h1 class="sm:text-[60px] text-[45px] font-bold tracking-tight" style="background: linear-gradient(90deg, #ebebeb, #105fc7, #00bdd6, #d6d6d6); -webkit-background-clip: text; color: transparent;">Welcome to DocFinder</h1>
+            <p class="text-pretty text-lg/8 text-gray-300">Search and Rank Documents Intelligently</p>
+        </div>
+    </header>
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-12">
+        <!-- Search Section -->
+        <section class="shadow-md">
+            <form id="search-form" class="flex items-center space-x-4 relative">
+                <div class="relative w-full">
+                    <svg width="20" height="20" fill="currentColor" class="absolute left-3 top-1/2 -mt-2.5 text-slate-400 pointer-events-none group-focus-within:text-blue-500" aria-hidden="true">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" />
+                    </svg>
+                    <input 
+                        type="text" 
+                        id="query-input" 
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="Type your query here..."
+                        autocomplete="off"
+                    >
+                    <!-- Suggestions Dropdown -->
+                    <ul id="autocomplete-suggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg hidden scrollbar-custom"></ul>
+                </div>
+                <button 
+                    type="submit" 
+                    class="bg-[#00bdd6] text-white px-6 py-2 rounded-lg transition">
+                    Search
+                </button>
+                <button 
+                    id="clearBtn"
+                    type="button" 
+                    class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                    Clear
+                </button>
+            </form>            
+        </section>
+
+        <!-- Results Section -->
+        <section id="results-section" class="mt-10">
+            <h2 class="text-2xl font-semibold text-gray-300">Search Results</h2>
+            <div id="spinner" class="hidden text-center my-4 h-[200px] flex items-center justify-center">
+                <div class="dotted-loader">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>            
+            <div id="results-container" class="mt-6 space-y-4 scrollbar-custom h-[360px] overflow-y-auto">
+                <!-- Results will appear here -->
+            </div>
+        </section>     
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-screen text-white py-6 mt-12 absolute bottom-0 left-0">
+        <div class="container mx-auto px-6 text-center">
+            <p class="text-sm">&copy; 2024 DocFinder. All rights reserved.</p>
+        </div>
+    </footer>
+    <script src="script.js"></script>
+</body>
+</html>

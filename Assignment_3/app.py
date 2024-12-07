@@ -44,9 +44,6 @@ class SearchEngine:
             else:
                 doc_data['content'] += f"{text}"
 
-        content = f"{doc_data['title']} {doc_data['author']} {doc_data['content']}".replace("Abstract", "").strip()
-        doc_data['content'] = content
-
         return doc_data
 
 
@@ -142,7 +139,7 @@ class SearchEngine:
                 'doc_id': doc_id,
                 'title': doc['title'],
                 'author': doc['author'],
-                'snippet': snippet,
+                'snippet': snippet.replace("Abstract", ""),
                 'file_path': doc['file_name']
             })
 
