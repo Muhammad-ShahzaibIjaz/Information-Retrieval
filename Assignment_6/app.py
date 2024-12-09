@@ -1,6 +1,5 @@
 import os
 import string
-from math import sqrt
 from docx import Document
 from difflib import SequenceMatcher
 from collections import defaultdict
@@ -58,7 +57,7 @@ class SearchEngine:
                 continue
 
             doc_data = self.extract_text_from_documents(file_path)
-            doc_data['file_name'] = file_path
+            doc_data['file_name'] = file_name
             documents.append(doc_data)
 
         return documents
@@ -165,6 +164,82 @@ class SearchEngine:
         doc_scores = self.process_fuzzy_query(query, membership_degrees, fuzziness_threshold)
         results = self.rank_documents(doc_scores, self.documents)
         return results
+    
+
+
+def extract_docx_content(docx_file):
+    doc = Document(docx_file)
+    
+    content = {
+        "title": "",
+        "author": "",
+        "abstract": "",
+        "sections": {}
+    }
+    current_section = None
+    current_subsection = None
+
+    # Flags for extracting title, author, and abstract
+    title_extracted = False
+    extracted_author = False
+    extracted_abstract = False
+    abstract_start = False  # Initialize the abstract_start flag
+
+    for para in doc.paragraphs:
+        # Extract title: Assume it's the first non-empty paragraph that's not a heading
+        if not title_extracted and para.text.strip() and not para.style.name.startswith('Heading'):
+            content["title"] = para.text.strip()
+            title_extracted = True
+            continue  # Skip the title from further processing
+
+        # Extract author: Assume the author's name follows a specific format or keyword
+        if not extracted_author and "author" in para.text.lower():
+            content["author"] = para.text.strip().replace("Author:", "").replace("author:", "").strip()
+            extracted_author = True
+            continue
+
+        # Extract abstract (assuming it's labeled as "Abstract" or a similar heading)
+        if not extracted_abstract and para.text.strip().lower() == "abstract":
+            abstract_start = True  # Start extracting the abstract
+            continue
+        elif abstract_start:
+            content["abstract"] += para.text.strip() + "\n"
+            if para.text.strip() == "":
+                abstract_start = False  # End of abstract when a blank line is encountered
+            continue
+
+        # Check if the paragraph is a heading (usually marked as bold)
+        if para.style.name.startswith('Heading'):
+            heading_level = int(para.style.name.split()[-1])  # Extract heading level
+            heading_text = para.text.strip()
+
+            if heading_level == 1:  # Main section
+                current_section = heading_text
+                content["sections"][current_section] = ""  # Initialize as an empty string for the section content
+                current_subsection = None
+            elif heading_level == 2:  # Subsection
+                current_subsection = heading_text
+                if current_section:  # Ensure current_section is initialized
+                    # If the section is not a dictionary, convert it into one
+                    if isinstance(content["sections"][current_section], str):  # Main section is currently a string
+                        content["sections"][current_section] = {}  # Convert it into a dictionary for subsections
+                    content["sections"][current_section][current_subsection] = ""  # Initialize empty string for subsection content
+            else:
+                continue  # For further levels, you can extend logic here if needed
+
+        else:
+            # Otherwise, it's content under the current section or subsection
+            if current_section:
+                if current_subsection:
+                    # Append content to the subsection (it's a string)
+                    content["sections"][current_section][current_subsection] += para.text.strip() + "\n"
+                else:
+                    # Append content to the main section (it's a string)
+                    content["sections"][current_section] += para.text.strip() + "\n"
+
+    return content
+
+
 
 # Initialize the search engine once when the app starts
 search_engine = SearchEngine('Documents')
@@ -179,10 +254,10 @@ def suggestions():
     return jsonify({"suggestions": suggestions})
 
 
-@app.route('/api/v8/search/author', methods=['GET'])
+@app.route('/api/v6/search/author', methods=['GET'])
 def search_author():
     query = request.args.get('query', '')
-    threshold = float(request.args.get('threshold', 0.3))
+    threshold = float(request.args.get('threshold', 0.6))
 
     if not query:
         return jsonify({"error": "Query parameter is required"}), 400
@@ -190,10 +265,10 @@ def search_author():
     results = search_engine.search(query, search_engine.author_membership_degrees, threshold)
     return jsonify({"results": results})
 
-@app.route('/api/v8/search/title', methods=['GET'])
+@app.route('/api/v6/search/title', methods=['GET'])
 def search_title():
     query = request.args.get('query', '')
-    threshold = float(request.args.get('threshold', 0.3))
+    threshold = float(request.args.get('threshold', 0.6))
 
     if not query:
         return jsonify({"error": "Query parameter is required"}), 400
@@ -201,16 +276,28 @@ def search_title():
     results = search_engine.search(query, search_engine.title_membership_degrees, threshold)
     return jsonify({"results": results})
 
-@app.route('/api/v8/search/content', methods=['GET'])
+@app.route('/api/v6/search/content', methods=['GET'])
 def search_fulltext():
     query = request.args.get('query', '')
-    threshold = float(request.args.get('threshold', 0.3))
+    threshold = float(request.args.get('threshold', 0.6))
 
     if not query:
         return jsonify({"error": "Query parameter is required"}), 400
 
     results = search_engine.search(query, search_engine.content_membership_degrees, threshold)
     return jsonify({"results": results})
+
+@app.route('/api/v6/article/extract', methods=['GET'])
+def extract_content():
+    try:
+        query = request.args.get('query', '')
+        if not query:
+            return jsonify({"error": "Query parameter is required"}), 400
+        
+        data = extract_docx_content('Documents/' + query)
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error" : str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

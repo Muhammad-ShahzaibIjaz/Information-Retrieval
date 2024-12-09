@@ -2,7 +2,6 @@ import os
 import string
 import difflib
 import networkx as nx
-from nltk.stem import PorterStemmer
 from docx import Document
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -11,7 +10,6 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-stemmer = PorterStemmer()
 
 
 class SearchEngine():
@@ -64,8 +62,7 @@ class SearchEngine():
     def preprocess_text(self, text):
         stopwords = {"the", "and", "is", "in", "to", "of", "on", "for", "with", "a", "an", "as", "by", "this", "it", "at", "or", "that"}
         translator = str.maketrans('', '', string.punctuation)
-        words = text.lower().translate(translator).split()
-        return [stemmer.stem(word) for word in words if word not in stopwords]
+        return [word for word in text.lower().translate(translator).split() if word not in stopwords]
 
     # Build proximity graph
     def build_proximity_graph(self, documents):
