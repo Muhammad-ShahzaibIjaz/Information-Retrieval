@@ -72,7 +72,7 @@ class SearchEngine:
     def extract_author_from_documents(self, documents):
         return [doc['author'] for doc in documents if doc.get('author')]
 
-    def stem(word):
+    def stem(self, word):
         suffixes = ['ing', 'es', 'ed', 'ly', 'er', 'ment', 'ness', 'ful', 'able', 'ible']
         for suffix in suffixes:
             if word.endswith(suffix):

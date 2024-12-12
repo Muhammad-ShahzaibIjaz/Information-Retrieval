@@ -104,15 +104,15 @@ class SearchEngine:
         return index, search_terms
 
 
-    # Convert query into a binary vector
-    def query_to_binary_vector(self, query, index):
-        query_terms = set(self.preprocess_text(query))
-        return {term: 1 if term in query_terms else 0 for term in index}
-
     def dice_similarity(self, query_vector, doc_vector):
         intersection = sum(query_vector[term] * doc_vector.get(term, 0) for term in query_vector)
         total_terms = sum(query_vector.values()) + sum(doc_vector.values())
         return (2 * intersection) / total_terms if total_terms != 0 else 0
+
+    # Convert query into a binary vector
+    def query_to_binary_vector(self, query, index):
+        query_terms = set(self.preprocess_text(query))
+        return {term: 1 if term in query_terms else 0 for term in index}
 
     # Function to rank documents based on similarity
     def rank_documents_bim(self, query, index):

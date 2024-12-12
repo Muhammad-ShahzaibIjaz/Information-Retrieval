@@ -1,0 +1,1 @@
+In OOP, classes are blueprints for objects. An object is an instance of a class. The object contains attributes (data) and methods (functions) that define its behavior.

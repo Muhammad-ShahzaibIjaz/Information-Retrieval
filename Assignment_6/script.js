@@ -163,7 +163,7 @@ document.getElementById("search-form").addEventListener("submit", async function
 
 function openArticle(docId) {
     // You can use the docId to perform further actions or pass it in the URL
-    window.open(`article.html?file=${encodeURIComponent(docId)}`, '_blank');
+    window.open(`article.html?file=${encodeURIComponent('conversion.docx')}`, '_blank');
 }
 
 

@@ -1,0 +1,1 @@
+Object-Oriented Programming (OOP) is a programming paradigm that uses objects and classes. In OOP, abstraction is a fundamental concept. The abstraction allows focusing on high-level functionality without dealing with low-level implementation details.

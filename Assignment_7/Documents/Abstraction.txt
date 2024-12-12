@@ -1,0 +1,1 @@
+Abstraction in OOP helps in hiding the internal details of objects and only exposing the relevant information. It is achieved using abstract classes and interfaces.

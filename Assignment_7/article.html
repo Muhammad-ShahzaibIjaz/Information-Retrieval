@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocFinder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Afacad+Flux:wght@100..1000&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lottie-web@5.9.4/build/player/lottie.min.js"></script>
+    <style>
+        /* Custom scrollbar styles */
+        .scrollbar-custom::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+  
+        .scrollbar-custom::-webkit-scrollbar-thumb {
+          background-color: #4a5568; /* Darker gray */
+          border-radius: 4px;
+        }
+  
+        .scrollbar-custom::-webkit-scrollbar-track {
+          background-color: #edf2f7; /* Light gray */
+          border-radius: 4px;
+        }
+
+        .dotted-loader {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px; /* Spacing between dots */
+        }
+
+        .dotted-loader span {
+            width: 10px;
+            height: 10px;
+            background-color: #3498db; /* Windows-like blue color */
+            border-radius: 50%;
+            animation: bounce 1.5s infinite;
+        }
+
+        .dotted-loader span:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+
+        .dotted-loader span:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+        #autocomplete-suggestions {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        #autocomplete-suggestions li {
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #autocomplete-suggestions li:hover {
+            background-color: #f3f4f6; /* Light gray */
+        }
+
+        #autocomplete-suggestions li.active {
+            background-color: #e5e7eb; /* Slightly darker gray */
+        }
+    </style>
+</head>
+<body class="h-screen relative isolate overflow-hidden bg-gray-900 px-6 pt-6 flex-col sm:px-16 md:pt-24 lg:flex lg:gap-x-20 lg:px-24 lg:pt-0" style="font-family: Afacad Flux, sans-serif;">
+    <svg viewBox="0 0 1024 1024" class="absolute left-1/2 top-1/2 -z-10 h-[64rem] w-[64rem] -translate-y-1/2 [mask-image:radial-gradient(closest-side,white,transparent)] sm:left-full sm:-ml-80 lg:left-1/2 lg:ml-0 lg:-translate-x-1/2 lg:translate-y-0" aria-hidden="true">
+        <circle cx="512" cy="512" r="512" fill="url(#759c1415-0410-454c-8f7c-9a820de03641)" fill-opacity="0.7" />
+        <defs>
+          <radialGradient id="759c1415-0410-454c-8f7c-9a820de03641">
+            <stop stop-color="#7775D6" />
+            <stop offset="1" stop-color="#E935C1" />
+          </radialGradient>
+        </defs>
+    </svg>
+
+    <!-- Table of Content -->
+    <aside class="h-screen  absolute left-0 top-0 w-[350px] bg-[rgba(0,0,0,0.1)] px-3 pt-6">
+        <h4 class="text-3xl font-semibold mb-4 text-white" >Table of Contents</h4>
+        <ul id="table-of-contents" class="h-[calc(100vh-70px)] overflow-y-auto scrollbar-custom"></ul>
+    </aside>
+
+    <div class="ps-[255px]">
+        <!-- header -->
+        <header class="ps-5 py-3">
+            <h1 id="doc-title" class="text-[2rem] font-bold mb-2" style="background: linear-gradient(90deg, #ebebeb, #105fc7, #00bdd6, #d6d6d6); -webkit-background-clip: text; color: transparent;"></h1>
+            <p id="doc-author" class="text-xl font-semibold text-gray-200 mb-2"></p>
+            <nav id="breadcrumb" class="flex items-center space-x-2 text-gray-300 px-4 py-2 rounded">
+                <span class="text-xl text-gray-200">1. Abstract</span>
+            </nav>
+        </header>
+        
+        
+        <!-- Main -->
+        <main id="main-section" class="py-6 ps-8 scrollbar-custom overflow-y-auto h-[calc(100vh-200px)] pe-2">
+            <!-- Abstract -->
+            <div id="abstract">
+                <h2 class="text-2xl text-gray-300 mb-2">1. Abstract</h2>
+                <p id="doc-abstract" class="text-lg text-gray-400"></p>
+            </div>
+
+            <!-- other content -->
+            <section id="doc-content" class="mt-6"></section>
+            <div id="spinner" class="hidden text-center my-4 h-[200px] flex items-center justify-center">
+                <div class="dotted-loader">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div> 
+        </main>
+
+    </div>
+    <script>
+
+        async function getArticleContent(article_name) {
+            try{
+                let url = `http://localhost:5000/api/v6/article/extract?query=${encodeURIComponent(article_name)}`;
+                const response = await fetch(url, {method: 'GET'});
+
+                if(!response.ok) {
+                    throw new Error("failed to fetch result");
+                }
+
+                return response.json();
+            }
+            catch (error) {
+                console.error("Error fetching search documents:", error);
+                return []; // Return an empty array on error
+            }
+        }
+
+        function capitalizeFirstLetterOfEachWord(str) {
+            return str
+                .split(' ') // Split the string into words
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Capitalize the first letter of each word
+                .join(' '); // Join the words back together
+        }
+
+        // Helper function to generate section numbers
+        function generateNumbering(parentNumber, sectionIndex) {
+            return parentNumber ? `${parentNumber}.${sectionIndex}` : `${sectionIndex}`;
+        }
+
+        function createTOC(backendData) {
+            const toc = document.getElementById("table-of-contents");
+            const sections = backendData.sections;
+
+            let sectionCount = 1;
+
+            const abstractLi = document.createElement("li");
+            abstractLi.className = "mb-3";
+            const abstractAnchor = document.createElement("a");
+            abstractAnchor.href = "#abstract";
+            abstractAnchor.className = "section scroll-link line-clamp-1 w-full text-left font-medium text-gray-300 hover:text-white hover:underline cursor-pointer text-lg";
+            abstractAnchor.textContent = "1. Abstract";
+            abstractLi.appendChild(abstractAnchor);
+
+            toc.appendChild(abstractLi);
+
+            for (const section in sections) {
+                sectionCount++;
+                const sectionLi = document.createElement("li");
+                sectionLi.className = "mb-3";
+
+                const sectionAnchor = document.createElement("a");
+                const sectionNumber = generateNumbering("", sectionCount);
+                sectionAnchor.href = `#${section.replace(/ /g, '-').toLowerCase()}`;  // Using a hyphen for spaces in the section ID
+                sectionAnchor.className = "section scroll-link line-clamp-1 w-full text-left font-medium text-gray-300 hover:text-white hover:underline cursor-pointer text-lg";
+                sectionAnchor.title = capitalizeFirstLetterOfEachWord(section);
+                sectionAnchor.textContent = `${sectionNumber}. ${capitalizeFirstLetterOfEachWord(section)}`;
+                sectionAnchor.addEventListener("click", (event) => sectionClickEvent(event, sectionAnchor));
+                sectionLi.appendChild(sectionAnchor);
+
+                // Check for subsections (if the section is an object)
+                if (typeof sections[section] === "object") {
+                    const subsectionUl = document.createElement("ul");
+                    subsectionUl.className = "pl-5 pt-2 hidden";
+                    let subsectionCount = 0;
+
+                    for (const subsection in sections[section]) {
+                        subsectionCount++;
+                        const subsectionLi = document.createElement("li");
+                        subsectionLi.className = "mb-1";
+
+                        const subsectionAnchor = document.createElement("a");
+                        const subSectionNumber = generateNumbering(sectionCount, subsectionCount);
+                        subsectionAnchor.href = `#${subsection.replace(/ /g, '-').toLowerCase()}`;  // Using a hyphen for spaces in the subsection ID
+                        subsectionAnchor.className = "subsection scroll-link text-gray-400 hover:text-gray-300 text-base cursor-pointer";
+                        subsectionAnchor.title = capitalizeFirstLetterOfEachWord(subsection);
+                        subsectionAnchor.textContent = `${subSectionNumber}.  ${capitalizeFirstLetterOfEachWord(subsection)}`;
+                        subsectionLi.appendChild(subsectionAnchor);
+                        subsectionUl.appendChild(subsectionLi);
+                    }
+                    sectionLi.appendChild(subsectionUl);
+                }
+                toc.appendChild(sectionLi);
+            }
+        }
+
+        function generateContent(backendData) {
+            const contentSection = document.getElementById("doc-content");
+            const sections = backendData.sections;
+            let sectionCount = 1;
+            for (const section in sections) {
+                sectionCount++;
+                const sectionDiv = document.createElement("div");
+                sectionDiv.id = section.replace(/ /g, '-').toLowerCase();
+                sectionDiv.className = "mb-6";
+
+                const sectionHeading = document.createElement("h2");
+                sectionHeading.className = "text-2xl text-gray-300 mb-2 text-bold";
+                sectionHeading.textContent = `${generateNumbering("", sectionCount)}. ${capitalizeFirstLetterOfEachWord(section)}`;
+                sectionDiv.appendChild(sectionHeading);
+
+                if (typeof sections[section] === "string") {
+                    const paragraph = document.createElement("p");
+                    paragraph.className = "text-lg text-gray-400 text-justify";
+                    paragraph.textContent = sections[section];
+                    sectionDiv.appendChild(paragraph);
+                }
+                else {
+                    let subSectionCount = 0;
+                    for (const subSection in sections[section]) {
+                        subSectionCount++;
+                        const subSectionDiv = document.createElement("div");
+                        subSectionDiv.id = subSection.replace(/ /g, '-').toLowerCase();
+                        subSectionDiv.className = "mb-6";
+
+                        const subSectionHeading = document.createElement("h3");
+                        subSectionHeading.className = "text-xl text-gray-300 mb-2 text-bold";
+                        subSectionHeading.textContent = `${generateNumbering(sectionCount, subSectionCount)}.  ${capitalizeFirstLetterOfEachWord(subSection)}`;
+                        
+                        subSectionDiv.appendChild(subSectionHeading);
+
+                        const subSectionPara = document.createElement("p");
+                        subSectionPara.className = "text-lg text-gray-400 text-justify";
+                        subSectionPara.textContent = sections[section][subSection];
+
+                        subSectionDiv.appendChild(subSectionPara);
+
+                        sectionDiv.appendChild(subSectionDiv);
+                    }
+                }
+
+                contentSection.appendChild(sectionDiv);
+            }
+        }
+
+        function sectionClickEvent (event, element) {
+            event.preventDefault();
+            const siblingElement = element.nextElementSibling;
+            console.log(siblingElement);
+            if(siblingElement) {
+                siblingElement.classList.toggle('hidden');
+            }
+        }
+
+        function getQueryParameter(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        document.addEventListener("DOMContentLoaded",async () => {
+            const spinner = document.getElementById("spinner");
+            // Show the loader
+            spinner.classList.remove("hidden");
+            const filePath = getQueryParameter('file');
+            
+            const backendData = await getArticleContent(filePath);
+            spinner.classList.add("hidden");
+            document.getElementById("doc-title").textContent = backendData.title;
+            document.getElementById("doc-author").textContent = `Author: ${backendData.author}`;
+            document.getElementById("doc-abstract").textContent = backendData.abstract;
+
+            createTOC(backendData);
+            generateContent(backendData);
+            const scrollLinks = document.querySelectorAll(".scroll-link");
+            const mainELement = document.getElementById("main-section");
+            
+            // Attach a scroll event listener
+            document.getElementById("main-section").addEventListener("scroll", () => {
+                const currentSectionId = getCurrentSection();
+                if (currentSectionId) {
+                    updateBreadCrumb(currentSectionId);
+                }
+            });
+
+
+            scrollLinks.forEach(link => {
+                link.addEventListener("click", (event) => {
+                    event.preventDefault();
+
+                    const targetId = link.getAttribute("href").slice(1);
+                    const targetElement = document.getElementById(targetId);
+
+                    if (targetElement) {
+                        const offsetTop = targetElement.offsetTop - mainELement.offsetTop;
+
+                        mainELement.scrollTo({
+                            top: offsetTop,
+                            behavior: "smooth"
+                        });
+                    }
+                });
+            });
+
+            // Select the breadcrumb container
+            const breadcrumbContainer = document.getElementById("breadcrumb");
+            const sections = document.querySelectorAll("#abstract, #doc-content > div, #doc-content > div > div");
+
+            function updateBreadCrumb(sectionId) {
+                const targetSection = document.getElementById(sectionId);
+
+                if (!targetSection) return;
+
+                const breadcrumbs = [];
+                let currentElement = targetSection;
+
+                // Traverse up through parent sections
+                while (currentElement && currentElement !== document.getElementById("main-section")) {
+                    if (currentElement.tagName === "DIV") {
+                        const heading = currentElement.querySelector("h2, h3");
+                        if (heading) {
+                            breadcrumbs.unshift({
+                                name: heading.textContent.trim(),
+                                id: currentElement.id,
+                            });
+                        }
+                    }
+                    currentElement = currentElement.parentElement;
+                }
+
+                // Clear existing breadcrumbs
+                breadcrumbContainer.innerHTML = "";
+
+                // Render the breadcrumbs
+                breadcrumbs.forEach((breadcrumb, index) => {
+                    if (index + 1 != breadcrumbs.length) {
+                        const breadcrumbLink = document.createElement("a");
+                        breadcrumbLink.href = `#${breadcrumb.id}`;
+                        breadcrumbLink.textContent = breadcrumb.name;
+                        breadcrumbLink.className = "text-xl hover:underline text-gray-100";
+
+                        breadcrumbContainer.appendChild(breadcrumbLink);
+
+                        // Add a separator if it's not the last breadcrumb
+                        if (index < breadcrumbs.length - 1) {
+                            const separator = document.createElement("span");
+                            separator.textContent = " / ";
+                            separator.className = "mx-2 text-gray-200";
+                            breadcrumbContainer.appendChild(separator);
+                        }
+                    }
+                    else {
+                        const breadcrumbLink = document.createElement("span");
+                        breadcrumbLink.textContent = breadcrumb.name;
+                        breadcrumbLink.className = "text-xl text-gray-200";
+
+                        breadcrumbContainer.appendChild(breadcrumbLink);
+                    }
+                });
+            }
+
+            // Function to determine the currently visible section
+            function getCurrentSection() {
+                let currentSection = null;
+                let currentOffset = Number.MAX_VALUE;
+
+                sections.forEach((section) => {
+                    const rect = section.getBoundingClientRect();
+                    const offset = Math.abs(rect.top - document.getElementById("main-section").getBoundingClientRect().top);
+
+                    if (rect.top >= 0 && offset < currentOffset) {
+                        currentOffset = offset;
+                        currentSection = section;
+                    }
+                });
+
+                return currentSection?.id;
+            }
+
+        });
+
+    </script>
+</body>
+</html>

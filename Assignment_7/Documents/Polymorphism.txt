@@ -1,0 +1,1 @@
+Polymorphism is the ability of an object to take many forms. It allows objects of different classes to be treated as objects of a common superclass. Overloading and overriding are two ways to achieve polymorphism.

@@ -1,0 +1,1 @@
+Inheritance is a mechanism in OOP where one class inherits the properties and methods of another class. It promotes code reusability and is an essential part of OOP.

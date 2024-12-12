@@ -1,0 +1,1 @@
+Encapsulation is another core concept in OOP. It refers to the bundling of data and methods that operate on the data within one unit or class. Encapsulation helps protect an object's state from unintended interference.

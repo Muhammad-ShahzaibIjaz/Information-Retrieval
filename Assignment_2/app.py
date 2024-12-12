@@ -100,6 +100,7 @@ class SearchEngine:
 
         return index, doc_lengths, search_terms
 
+    # Function that takes query vector and document vector and find the cosine similarity score
     def compute_cosine_similarity(self, query_vector, document_vector):
         dot_product = sum(query_vector.get(term, 0) * document_vector.get(term, 0) for term in query_vector)
         query_magnitude = sqrt(sum(val ** 2 for val in query_vector.values()))
@@ -113,6 +114,7 @@ class SearchEngine:
         suggestions = [term for term in self.search_terms if term.startswith(input_text)]
         return sorted(suggestions, key=lambda x: self.search_terms[x], reverse=True)[:5]
 
+    # Search Function
     def search(self, query, index):
         # Preprocess the query text and convert it into a term frequency vector
         query_terms = self.preprocess_text(query)
